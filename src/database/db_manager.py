@@ -107,7 +107,7 @@ class DatabaseManager:
                 state.get("research_notes"),
                 state.get("research_summary"),
                 sources_json,
-                state.get("research_status", "pending").value,
+                state.get("research_status", "pending"),
                 state.get("human_feedback"),
                 now
             ))
@@ -198,3 +198,23 @@ class DatabaseManager:
                 })
             
             return state
+
+    def list_sessions(self, limit: int = 12) -> list[Dict[str, Any]]:
+        """Return recent sessions for the UI explorer"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT session_id, company_name, target_industry, updated_at, status FROM sessions ORDER BY updated_at DESC LIMIT ?",
+                (limit,)
+            )
+            rows = cursor.fetchall()
+            return [
+                {
+                    "session_id": row["session_id"],
+                    "company_name": row["company_name"],
+                    "target_industry": row["target_industry"],
+                    "updated_at": row["updated_at"],
+                    "status": row["status"]
+                }
+                for row in rows
+            ]

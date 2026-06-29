@@ -2,7 +2,7 @@ import os
 from typing import Dict, Any, List
 from datetime import datetime
 from tavily import TavilyClient
-from langchain_mistralai import ChatMistralAI  # Direct import from langchain_mistralai
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.schema import HumanMessage, SystemMessage
 from dotenv import load_dotenv
 import json
@@ -15,10 +15,10 @@ class ResearcherAgent:
     
     def __init__(self):
         self.tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
-        self.llm = ChatMistralAI(
-            model="mistral-large-latest",
+        self.llm = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash",
             temperature=0.3,
-            api_key=os.getenv("MISTRAL_API_KEY")  # Note: parameter is api_key
+            google_api_key=os.getenv("GEMINI_API_KEY")
         )
         self.max_search_results = int(os.getenv("MAX_SEARCH_RESULTS", 5))
     
@@ -27,7 +27,7 @@ class ResearcherAgent:
         Perform deep-dive research on a company
         """
         try:
-            print(f"🔍 Researching {company_name}...")
+            print(f"Researching {company_name}...")
             
             # Step 1: Search for recent news and challenges
             search_queries = self._generate_search_queries(company_name, target_industry)
@@ -64,10 +64,23 @@ class ResearcherAgent:
             print("  Creating summary...")
             summary = await self._create_summary(company_name, research_notes)
             
-            print("✅ Research complete!")
+            print("Research complete!")
+            
+            # Format research notes into markdown for the UI
+            md_notes = f"### 🏢 {company_name}\n\n"
+            if research_notes['key_findings']:
+                md_notes += "#### 🔑 Key Findings\n" + "\n".join([f"- {x}" for x in research_notes['key_findings']]) + "\n\n"
+            if research_notes['pain_points']:
+                md_notes += "#### ⚠️ Pain Points\n" + "\n".join([f"- {x}" for x in research_notes['pain_points']]) + "\n\n"
+            if research_notes['recent_developments']:
+                md_notes += "#### 📈 Recent Developments\n" + "\n".join([f"- {x}" for x in research_notes['recent_developments']]) + "\n\n"
+            if research_notes['market_position']:
+                md_notes += "#### 🎯 Market Position\n" + str(research_notes['market_position']) + "\n\n"
+            if research_notes['sources']:
+                md_notes += "#### 🔗 Sources\n" + "\n".join([f"- [{x}]({x})" for x in set(research_notes['sources'])])
             
             return {
-                "research_notes": json.dumps(research_notes, indent=2),
+                "research_notes": md_notes,
                 "research_summary": summary,
                 "research_sources": research_notes["sources"],
                 "research_timestamp": datetime.now(),
@@ -76,7 +89,7 @@ class ResearcherAgent:
             }
             
         except Exception as e:
-            print(f"❌ Research failed: {str(e)}")
+            print(f"Research failed: {str(e)}")
             return {
                 "error_message": f"Research failed: {str(e)}",
                 "research_status": "failed"
@@ -173,9 +186,9 @@ class ResearcherAgent:
             elif current_section:
                 if current_section == "market_position":
                     sections[current_section] += line + " "
-                elif line.startswith('-') or line[0].isdigit() or line.startswith('•'):
+                elif line.startswith('-') or line.startswith('*') or line[0].isdigit() or line.startswith('•'):
                     # Remove the bullet/number and add to list
-                    clean_line = line.lstrip('-0123456789.• ').strip()
+                    clean_line = line.lstrip('-*0123456789.• ').strip()
                     if clean_line:
                         sections[current_section].append(clean_line)
         

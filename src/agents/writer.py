@@ -1,6 +1,6 @@
 import os
 from typing import Dict, Any
-from langchain_mistralai import ChatMistralAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.schema import HumanMessage, SystemMessage
 from dotenv import load_dotenv
 
@@ -10,10 +10,10 @@ class WriterAgent:
     """The Secretary - Crafts personalized outreach emails"""
     
     def __init__(self):
-        self.llm = ChatMistralAI(
-            model="mistral-large-latest",
+        self.llm = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash",
             temperature=0.5,
-            api_key=os.getenv("MISTRAL_API_KEY")
+            google_api_key=os.getenv("GEMINI_API_KEY")
         )
     
     async def draft_email(self, company_name: str, research_summary: str, 
@@ -73,7 +73,7 @@ class WriterAgent:
             }
             
         except Exception as e:
-            print(f"❌ Email drafting failed: {str(e)}")
+            print(f"Email drafting failed: {str(e)}")
             return {
                 "error_message": f"Email drafting failed: {str(e)}",
                 "email_status": "failed"
